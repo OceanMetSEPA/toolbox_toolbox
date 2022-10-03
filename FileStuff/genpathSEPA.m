@@ -37,8 +37,9 @@ function p = genpathSEPA(d,varargin)
 %------------------------------------------------------------------------------
 
 if nargin==0,
-    help genpathSEPA
-  return
+%    help genpathSEPA
+%  return
+    d=strsplit(path,';');
 end
 
 options=struct;
@@ -47,6 +48,16 @@ options.class=false;
 options.private=false;
 options.cell=true; 
 options=checkArguments(options,varargin);
+
+d=cellstr(d);
+if length(d)>1
+    p=cellfun(@(x)genpathSEPA(x,options),d,'unif',0);
+    p=vertcat(p{:});
+    p=unique(p);
+    return
+end
+d=char(d);
+
 
 % initialise variables
 classsep = '@';  % qualifier for overloaded class directories
