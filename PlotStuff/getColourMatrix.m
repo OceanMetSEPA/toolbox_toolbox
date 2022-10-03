@@ -32,18 +32,6 @@ end
 if isempty(clim)
     clim=[min(vals(:)),max(vals(:))];
 end
-if rand(1)>Inf
-    fprintf('GETTIGN COLOUR MATRICX FOR %d vals\n',length(vals));
-    fprintf('CMAP SIZE:\n')
-    disp(size(cmap))
-    fprintf('CLIM:\n')
-    disp(clim)
-end
-
-if diff(clim)==0
-    'NO RANGE';
-%    clim=clim+[0,1];
-end
 
 Nc=size(cmap,1);
 clim=real(clim);
@@ -55,12 +43,9 @@ colourIndices(colourIndices>Nc)=Nc;
 cmap=[cmap;options.nancol];
 colourIndices(isnan(colourIndices))=Nc+1;
 colourIndices(vals==options.nanval)=Nc+1;
-%fprintf('GGeting colour matrix and range = :\n')
-%disp(min(valIndices))
-%disp(max(valIndices))
-%class(valIndices)
+
 colourMatrix=cmap(colourIndices,:);
 colourMatrix=reshape(colourMatrix,valSize(1),valSize(2),3);
-colourMatrix=squeeze(colourMatrix); % 20160526 change for twinConnectivityPlot
+colourMatrix=squeeze(colourMatrix); 
 end
 
