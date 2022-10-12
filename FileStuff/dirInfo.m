@@ -37,31 +37,35 @@ end
 % 1) ascending (A-Z, old-new, small-big)
 % 2) descending (Z-A, new-old, big-small)
 % If neither is set, we leave order as how dir function returns them
-sortOptions={'size','date','name'};
-directionOptions={'ascending','descending'};
-k=contains(sortOptions,varargin);
-switch sum(k)
-    case 0
-        warning('No valid input for sorting')
-        sortOption=[];
-    case 1
-        sortOption=sortOptions{k};
-    otherwise
-        disp(sortOptions(k))
-        error('Ambiguous sort option!')
+if ~isempty(varargin)
+    sortOptions={'size','date','name'};
+    directionOptions={'ascending','descending'};
+    k=contains(sortOptions,varargin);
+    switch sum(k)
+        case 0
+            warning('No valid input for sorting')
+            sortOption=[];
+        case 1
+            sortOption=sortOptions{k};
+        otherwise
+            disp(sortOptions(k))
+            error('Ambiguous sort option!')
+    end
+    k=contains(directionOptions,varargin);
+    switch sum(k)
+        case 0
+            warning('No valid input for order')
+            directionOption=[];
+        case 1
+            directionOption=directionOptions{k};
+        otherwise
+            disp(directionOptions(k))
+            error('Ambiguous direction option!')
+    end
+else
+    sortOption=[];
+    directionOption=[];
 end
-k=contains(directionOptions,varargin);
-switch sum(k)
-    case 0
-        warning('No valid input for order')
-        directionOption=[];
-    case 1
-        directionOption=directionOptions{k};
-    otherwise
-        disp(directionOptions(k))
-        error('Ambiguous direction option!')
-end
-
 %fprintf('Sort option = ''%s''; direction = ''%s''\n',sortOption,directionOption)
 
 f=cellstr(f);
@@ -89,8 +93,8 @@ for index=1:Nf
         continue
     end
     dii=dir(fi); % struct array
-    % generate string with more meaningful size 
-    fsize=cellstr(sizeString([dii.bytes])); 
+    % generate string with more meaningful size
+    fsize=cellstr(sizeString([dii.bytes]));
     [dii.sizeLabel]=fsize{:}; % then add like this!
     % Now prepare fullfile
     ff=fullfile({dii.folder},{dii.name});
@@ -120,6 +124,4 @@ if ~isempty(sortOption)
     diStructArray=diStructArray(indexOrder);
 end
 
-
 end
-
