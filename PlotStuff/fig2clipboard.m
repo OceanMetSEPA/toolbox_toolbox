@@ -83,7 +83,7 @@ if ~isempty(options.filename)
             disp(fileFormatToUse)
             error('Ambiguous format ''%s''; please specify one of the above options',fileFormat)
     end
-    fprintf('Saving using format option ''%s''\n',fileFormatToUse)
+%    fprintf('Saving using format option ''%s''\n',fileFormatToUse)
     filename=fullfile(a,b);
     print(fileFormatToUse,filename)
 end
