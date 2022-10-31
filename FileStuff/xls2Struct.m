@@ -35,6 +35,7 @@ function [s,header]=xls2Struct(fileName,varargin)
 %                   to struct array of length N with fields of length 1
 % startDate (0)  - if date column found, restrict output to dates >= startDate
 % endDate (inf)  - if date column found, restrict output to dates <= endDate
+% removeRowsAboveHeader (true) - remove rows above header(!)
 %
 % OUTPUT:
 % s      : struct containing excel data
@@ -70,6 +71,7 @@ options.dateFormat={'dd/mm/yyyy','dd/mm/yyyy HH:MM:SS'};
 options.array=false;
 options.startDate=0;
 options.endDate=inf;
+options.removeRowsAboveHeader=true;
 options=checkArguments(options,varargin);
 % read excel file.
 [~,~,xlsCellArray]=xlsread(fileName,options.sheet);
@@ -93,6 +95,10 @@ Nrow=size(xlsCellArray,1);
 rows2Keep=vectorFilter(Nrow,options.rows);%
 if ~isempty(header) % And if we found a header, remove that from data set
     rows2Keep=rows2Keep & ~vectorFilter(Nrow,headerRows);
+end
+% 20221031 - remove rows up to header:
+if options.removeRowsAboveHeader
+    rows2Keep=rows2Keep & ((1:Nrow)>headerRows)';
 end
 xlsCellArray=xlsCellArray(rows2Keep,:);
 % Right, what's left of our raw data should be everything we want to keep
@@ -142,6 +148,7 @@ for i=1:Ncol
     % Determine classes of column data:
     dataIsChar=cellfun(@ischar,iColumnData);
     dataIsNumeric=cellfun(@isnumeric,iColumnData);
+%    fprintf('Col %d: ''%s'' Char tot = %d; num total = %d\n',i,sFieldNames{i},sum(dataIsChar),sum(dataIsNumeric))
     % Tinker with data depending on class of its elements
     if ~any(dataIsChar)
         % If none of the column elements are chars, convert to matrix
