@@ -102,7 +102,7 @@ function count = cprintf(style,format,varargin)
 %    2011-03-04: Performance improvement
 %    2010-06-27: Fix for R2010a/b; fixed edge case reported by Sharron; CPRINTF with no args runs the demo
 %    2009-09-28: Fixed edge-case problem reported by Swagat K
-%    2009-05-28: corrected nargout behavior sugegsted by Andreas Gäb
+%    2009-05-28: corrected nargout behavior sugegsted by Andreas GÃ¤b
 %    2009-05-13: First version posted on <a href="http://www.mathworks.com/matlabcentral/fileexchange/authors/27420">MathWorks File Exchange</a>
 %
 % See also:
@@ -113,12 +113,23 @@ function count = cprintf(style,format,varargin)
 %
 % Programmed and Copyright by Yair M. Altman: altmany(at)gmail.com
 % $Revision:   1.2  $  $Date:   Apr 25 2014 09:39:08  $
+%
+% 20221109 - ts added 'none' option for style - just return. This is for
+% controlling text output e.g for testing code we might want lots of
+% (c)print statements, in which case we could set colour as required. To
+% suppress output, set colour to 'none'. 
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % $Workfile:   cprintf.m  $
 % $Revision:   1.2  $
 % $Author:   ted.schlicke  $
 % $Date:   Apr 25 2014 09:39:08  $
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if strcmp(style,'none')
+    count=0;
+    return
+end
 
   persistent majorVersion minorVersion
   if isempty(majorVersion)
