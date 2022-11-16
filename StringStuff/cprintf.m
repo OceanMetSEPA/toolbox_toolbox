@@ -127,7 +127,9 @@ function count = cprintf(style,format,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if strcmp(style,'none')
-    count=0;
+    if nargout
+        count=0;
+    end
     return
 end
 
