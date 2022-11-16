@@ -10,10 +10,17 @@ function varargout=cdisp(col,x)
 %
 % EXAMPLE:
 % cdisp(rand(1,3),magic(5)) % display magic square in random colour
+%
+% Dependencies:
+% cprintf()
 
 % Next line purely to avoid warning about x not being used. I don't like
 % warnings! 
 if rand(1)>inf,disp(x),end
+if nargin==1
+    x=col;
+    col='k';
+end
 
 str=evalc('disp(x)');
 switch nargout
