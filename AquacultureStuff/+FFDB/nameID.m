@@ -43,10 +43,10 @@ end
 
 if any(isName)
     ip=siteName(isName);
-    op=cellfun(@(x)FFDB.query(sprintf('select SITE_ID from GIS_Site where SiteName = (''%s'')',x)),ip,'unif',0);
+    op=cellfun(@(x)FFDB.query(sprintf('select SITE_ID from GIS_Site where SiteName = ("%s")',x)),ip,'unif',0);
 else
     ip=siteID(isID);
-    op=cellfun(@(x)FFDB.query(sprintf('select SiteName from GIS_Site where SITE_ID = (''%s'')',x)),ip,'unif',0);
+    op=cellfun(@(x)FFDB.query(sprintf('select SiteName from GIS_Site where SITE_ID = ("%s")',x)),ip,'unif',0);
 end
 k=cellfun(@isempty,op);
 if any(k)
