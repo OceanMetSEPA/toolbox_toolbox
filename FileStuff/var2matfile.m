@@ -32,13 +32,13 @@ varinfo=evalin(ws,cmd);
 structSizeGB=varinfo.bytes/1e9;
 ttic=now;
 
-fprintf('Variable ''%s'' has size %eGB\n',varname,structSizeGB)
+%fprintf('Variable ''%s'' has size %eGB\n',varname,structSizeGB)
 if structSizeGB>2
     matfileVersion='-v7.3'; % compressed
 else
     matfileVersion='-v6'; % uncompressed
 end
-fprintf('Saving data to ''%s'' with flag ''%s''\n',matfileName,matfileVersion)
+%fprintf('Saving data to ''%s'' with flag ''%s''\n',matfileName,matfileVersion)
 % Can't do this:
 %save(matfileName,varname,matfileVersion)
 % because variable called varname not found. 
@@ -47,5 +47,6 @@ fprintf('Saving data to ''%s'' with flag ''%s''\n',matfileName,matfileVersion)
 cmd=sprintf('save(''%s'',''%s'',''%s'')',matfileName,varname,matfileVersion);
 evalin(ws,cmd)
 timeTaken=(now-ttic)*(24*60*60);
-fprintf('Saving took %f seconds\n',timeTaken)
-
+if timeTaken>10
+    fprintf('Saving ''%s'' to ''%s'' took:\n %f seconds\n',varname,matfileName,timeTaken)
+end
