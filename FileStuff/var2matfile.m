@@ -7,7 +7,7 @@ function var2matfile(ip,matfileName)
 %   ip - variable to save
 %   matfileName - where to save variable
 %
-% OUTPUT: 
+% OUTPUT:
 %   none
 %
 if nargin<2
@@ -25,28 +25,45 @@ varname=inputname(1);
 
 % Use whos() function to get variable size. But it needs to be run in
 % caller workspace rather than within a function (?)
-ws='caller'; 
+ws='caller';
 % ws='base'; % doesn't work - variable might not be defined there
 cmd=sprintf('whos(''%s'')',varname);
 varinfo=evalin(ws,cmd);
 structSizeGB=varinfo.bytes/1e9;
-ttic=now;
+t0=datetime; % instead of tic
 
 %fprintf('Variable ''%s'' has size %eGB\n',varname,structSizeGB)
-if structSizeGB>2
-    matfileVersion='-v7.3'; % compressed
-else
-    matfileVersion='-v6'; % uncompressed
-end
+% if structSizeGB>2
+%     matfileVersion='-v7.3'; % compressed
+% else
+%     matfileVersion='-v6'; % uncompressed
+% end
 %fprintf('Saving data to ''%s'' with flag ''%s''\n',matfileName,matfileVersion)
-% Can't do this:
-%save(matfileName,varname,matfileVersion)
-% because variable called varname not found. 
-% Maybe we could reassign it within this function? Or evaluate in caller
-% workspace
-cmd=sprintf('save(''%s'',''%s'',''%s'')',matfileName,varname,matfileVersion);
-evalin(ws,cmd)
-timeTaken=(now-ttic)*(24*60*60);
+%cmd=sprintf('save(''%s'',''%s'',''%s'')',matfileName,varname,matfileVersion);
+%evalin(ws,cmd)
+
+% Above worked in R2018a- but not R2023a:
+% "Error using save
+% Found characters the default encoding is unable to represent."
+% Redo using different approach (avoiding evalin which might be a good
+% thing...)
+try
+    if structSizeGB>2
+        %    matfileVersion='-v7.3'; % compressed
+        save(matfileName,'ip','-v7.3')
+    else
+        %    matfileVersion='-v6'; % uncompressed
+        save(matfileName,'ip','-v6')
+    end
+catch % err
+    %    disp(err)
+    % Issue above with unrepresentable characters seems to be fixed somehow
+    % if we use version -7.3
+    save(matfileName,'ip','-v7.3');
+end
+
+dt=datetime-t0;
+timeTaken=seconds(dt);
 if timeTaken>10
     fprintf('Saving ''%s'' to ''%s'' took:\n %f seconds\n',varname,matfileName,timeTaken)
 end
