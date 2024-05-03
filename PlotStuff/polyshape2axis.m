@@ -9,12 +9,17 @@ function ax=polyshape2axis(ps,buff)
 % OUTPUT:
 % [1x4] array
 
-if nargin==2
-    ps=polybuffer(ps,buff);
-end
+% DON'T DO THIS - GRINDS MATLAB TO A HALT FOR LARGE POLYSHAPES
+%if nargin==2
+%    ps=polybuffer(ps,buff);
+%end
 
 vertices=vertcat(ps.Vertices);
 x=vertices(:,1);
 y=vertices(:,2);
-ax=[min(x),max(x),min(y),max(y)];
+%ax=[min(x),max(x),min(y),max(y)];
 
+if nargin==1
+    buff=0;
+end
+ax=boundaryRectangle(x,y,'dx',buff,'axis',1);          
