@@ -1,6 +1,6 @@
-function m = closestStringMatch(strings2CompareAgainst,string2Test)
+function op = closestStringMatch(strings2CompareAgainst,string2Test)
 % Find which string (in a list of strings) which is most similar to another
-% string
+% string (or list of strings)
 %
 % function [ m ] = closestStringMatch(strings2CompareAgainst,string2Test)
 %
@@ -15,7 +15,7 @@ function m = closestStringMatch(strings2CompareAgainst,string2Test)
 % The purpose of this is to save us a bit of typing when selecting options.
 %
 % *******************************************************************
-% INPUTS: 
+% INPUTS:
 % strings2CompareAgainst - list of strings (cell array)
 % string2Test            - string to compare with our list above
 %
@@ -43,56 +43,57 @@ function m = closestStringMatch(strings2CompareAgainst,string2Test)
 % closestStringMatch(s2c,'Oxygen') % returns 'Dissolved Oxygen'
 % closestStringMatch(s2c,'hor') % returns two strings starting 'horizontal'
 % closestStringMatch(s2c,'fish') % returns []
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% $Workfile:   closestStringMatch.m  $
-% $Revision:   1.0  $
-% $Author:   ted.schlicke  $
-% $Date:   Apr 08 2014 14:02:52  $
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% 20241106 - rewritten to remove any SEPA dependencies (e.g. stringFinder)
 
-if(nargin==0) 
+if nargin<2
     help closestStringMatch
     return
 end
 
-% first up, try exact match
-m=stringFinder(strings2CompareAgainst,string2Test,'type','exact');
-if(~isempty(m))
+string2Test=cellstr(string2Test);
+N=length(string2Test);
+if N>1
+    op=cellfun(@(x)closestStringMatch(strings2CompareAgainst,x),string2Test,'unif',0);
+    try
+        op=vertcat(op{:});
+    catch
+        % oh well
+    end
     return
 end
-% Now try exact match ignoring case...
-m=stringFinder(strings2CompareAgainst,string2Test,'type','exact','ig',1);
-if(~isempty(m))
-    return
-end
-% try matching start of string, case sensitive
-m=stringFinder(strings2CompareAgainst,string2Test,'type','start');
-if(~isempty(m))
-    return
+string2Test=char(string2Test);
+
+% 1) exact match
+k=strcmp(strings2CompareAgainst,string2Test);
+
+% 2) exact match, except case
+if ~any(k)
+    k=strcmpi(string2Test,strings2CompareAgainst);
 end
 
-% try matching start of string, case insensitive
-m=stringFinder(strings2CompareAgainst,string2Test,'type','start','ignorecase',true);
-if(~isempty(m))
-    return
+% 3) starting the same, case sensitive
+if ~any(k)
+    k=strncmp(string2Test,strings2CompareAgainst,length(string2Test));
 end
 
-% try finding string within strings2CompareAgainst, case sensitive
-m=stringFinder(strings2CompareAgainst,string2Test,'type','or');
-if(~isempty(m))
-    return
+% 4) starting the same, case insensitive
+if ~any(k)
+    k=strncmpi(string2Test,strings2CompareAgainst,length(string2Test));
 end
 
-% try finding string within strings2CompareAgainst, case insensitive
-m=stringFinder(strings2CompareAgainst,string2Test,'type','or','ignorecase',true);
-if(~isempty(m))
-    return
+% 5) string2Test present, case sensitive
+if ~any(k)
+    k=cellfun(@(x)contains(x,string2Test),strings2CompareAgainst);
 end
 
-if(isempty(m))
-%    warning('Didn''t find a matching string for ''%s''',string2Test)
-    m=[];
+% 6) string2Test present, case insensitive
+if ~any(k)
+    k=cellfun(@(x)contains(x,string2Test,'ig',1),strings2CompareAgainst);
 end
 
+if any(k) 
+    op=strings2CompareAgainst(k);
+else
+    op=[];
 end
-
