@@ -87,7 +87,6 @@ options.ignorecase=false;
 options.verbose=false;
 options.type='and';
 options.output='string';
-options.noMatch='warning';
 options.nand=[];
 options.nor=[];
 options.not=[];
