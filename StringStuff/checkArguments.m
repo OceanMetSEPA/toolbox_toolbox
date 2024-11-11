@@ -1,4 +1,4 @@
-function [options,argIndex,fieldIndex] = checkArguments(options,varargin)
+function options=checkArguments(options,varargin)
 % Function to set fields of a struct
 %
 % This function is designed to be a general way of setting options for
@@ -38,23 +38,14 @@ function [options,argIndex,fieldIndex] = checkArguments(options,varargin)
 % options=checkArguments(options,{'h',100},'mul','e') % error that 'h' doesn't specify unique field
 % options=checkArguments(options,struct('hpos',pi)) % update options using struct
 %
-% 22/01/2013 Add additional output arguments
-%
-% [options,ai,fi] = checkArguments(options,'hpos',100,'value',pi)
-% ai = [2, NaN, 1] % options fields set by these arguments (NaN means not
-%                    set, i.e. hsize not specified)
-% fi = [3, 1]   % argument 1 sets field 3 of struct; argument 2 sets field 1
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% $Workfile:   checkArguments.m  $
-% $Revision:   1.1  $
-% $Author:   ted.schlicke  $
-% $Date:   Oct 10 2016 10:00:06  $
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 20241107 - this function modified to more clearly identify whether input
+% arguments are for specifiying options for for setting options for this
+% function
+% (previous function broke if options had field 'n'. Specifiying 'n' as
+% input was interpreted as 'noMatch' flag for this function). 
+% 
+% Should really use matlab's 'inputparser' instead...
 
-argIndex=[];
-fieldIndex=[];
-
-% Check args to this function - we might not have to do much
 if nargin==0
     help checkArguments
     return
@@ -64,135 +55,156 @@ end
 while length(varargin)==1 && iscell(varargin)
     varargin=varargin{:};
 end
-% check that we've got some varargins to test
-if isempty(varargin) || isequal(varargin,{{}})% Don't need to do anything
+
+if isempty(varargin)
+    %    fprintf('Returning because varargin empty\n')
     return
 end
-% 20161007 - new feature! Allow varargin to be a struct - this can be
-% useful if we want to pass lots of arguments to a function
+
+% Allow arguments to be passed as struct (useful if we have a bunch of
+% options to set)
 if isstruct(varargin)
-    structInput=varargin; % this is our struct with various options
-    fn=fieldnames(structInput); % extract its fieldnames
-    str=arrayfun(@(i){fn{i},structInput.(fn{i})},1:length(fn),'Unif',0); % convert to cell array
-    varargin=horzcat(str{:}); % unbundle 
+    varargin=struct2varargin(varargin);
+elseif isstruct(varargin{1})
+    % Allow struct as varargin{1} plus additional argument pairs
+    tmp=struct2varargin(varargin{1});
+    varargin=[tmp,varargin(2:end)];
 end
 
-%%%%%%%%%%%%%%%%%%%%%%
-% Processes Involved:
-%%%%%%%%%%%%%%%%%%%%%%
-% 1) We reshape our 1d varargin to 2d - 1st row  = fieldname, second row =
-% values
-% 2) Check whether these arguments are to set options for this function
-% (stored in 'localOptions' struct)
-% 3) If not, we assume they're intended to set fields in 'options' struct
-% STAGE 1: reshape the args:
-if numel(varargin)==1 % Our arguments might be all bundled up
-    varargin=varargin{:}; % Expand our cell array
-    if ischar(varargin) % 
-        varargin=cellstr(varargin);
-    end
+if ~isstruct(options)
+    error('Please pass the struct!')
 end
+optionsFieldNames=fieldnames(options);
+%cprintf('blue','VARARGIN:\n')
+%disp(varargin)
+%underline
 
-v1=varargin(1);
-if iscell(v1)
-    varargin=[v1{:},varargin(2:end)];
-end
-
-if mod(length(varargin),2)~=0
-    fprintf('varargin = \n')
-    disp(varargin)
-    error('Please ensure there is an even number or arguments')
-end
-argsArray=reshape(varargin,2,[]);
-
-% STAGE 2 : prepare struct for setting options for this function (What to do with ambiguous
-% arguments etc):
+validOptions={'ignore','warning','error'};
 localOptions=struct('noMatch','warning','multipleMatch','warning');
 localOptionsFieldNames=fieldnames(localOptions);
-% Check if args are intended for setting optios for this function
-Nf=size(argsArray,2);
-rm=false(Nf,1);
-for i=1:Nf % Check each varargin string
-    fni=argsArray{1,i}; % 
-    cmp=strncmp(fni,localOptionsFieldNames,length(fni)); % Any match with local option fields?
-    if any(cmp) % Yes?
-        localOptions.(localOptionsFieldNames{cmp})=argsArray{2,i};    % Transfer varargin value to struct
-        rm(i)=true;
-    end
+
+tmp=intersect(optionsFieldNames,localOptionsFieldNames);
+if ~isempty(tmp)
+    warning('Ambigous options ''%s''',tdisp(tmp))
 end
-argsArray(:,rm)=[]; % and remove NB MIGHT WANT TO CHANGE THIS IF OUR OPTIONS STRUCT HAS SAME FIELDS AS LOCAL OPTIONS
-% SOME ERROR CHECKING FOR SETTING OF LOCAL OPTIONS:
-% These are the valid options:
-acceptableOptions={'ignore','warning','error'};
-% Check the local options are valid:
-s=strncmp(acceptableOptions,localOptions.noMatch,length(localOptions.noMatch));
-if(sum(s)~=1)
-    error('''noMatch'' option must be one of the above')
-else
-    localOptions.noMatch=acceptableOptions{s};
+Nargs=length(varargin);
+if Nargs==0
+    return
 end
-s=strncmp(acceptableOptions,localOptions.multipleMatch,length(localOptions.multipleMatch));
-if(sum(s)~=1)
-    disp('multipleMatch OPTIONS:')
-    disp(acceptableOptions)
-    error('''multipleMatch'' option must be one of the above')
-else
-    localOptions.multipleMatch=acceptableOptions{s};
-end
-% prepare function depending on option:
-switch localOptions.noMatch
-    case 'ignore'
-        noMatchFunction='sprintf';
-    case 'warning'
-        noMatchFunction='warning';
-    case 'error'
-        noMatchFunction='error';
-end
-switch localOptions.multipleMatch
-    case 'ignore'
-        multipleMatchFunction='sprintf';
-    case 'warning'
-        multipleMatchFunction='warning';
-    case 'error'
-        multipleMatchFunction='error';
+if mod(Nargs,2)~=0
+    %   fprintf('% args:\n',Nargs)
+    %   disp(varargin)
+    %   length(varargin)
+    %   assignin('base','s',varargin)
+    error('Function requires even number of arguments')
 end
 
-% OK, finished sorting local options. Now some abbreviations:
-Noptions=length(fieldnames(options)); % Number of options in options struct
-optionsFieldNames=fieldnames(options);
-Nargs2Check=size(argsArray,2);
-% Prepare space for additional outputs - gives more info about matches etc
-argIndex=NaN(1,Noptions);
-fieldIndex=NaN(1,Nargs2Check);
-
-% OK, now we start looping
-for i=1:Nargs2Check
-    %    i=args2check(argsIndex);
-    argi=argsArray{1,i}; % Input argument character
-    % Try to match command line arguments with options.
-    % We'll start by looking for an exact match:
-    m=strcmp(argi,optionsFieldNames); % Compare user argument with option fieldnames
-    lm=sum(m);
-    % If we didn't find an exact match, we'll be more lenient:
-    if(lm~=1)
-        m=strncmp(argi,optionsFieldNames,length(argi)); % Compare user argument with option fieldnames
-        lm=sum(m);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+optionsStructArray=cell(Nargs,1);
+for paramIndex=1:2:Nargs
+    iparam=varargin{paramIndex};
+    if ~ischar(iparam)
+        error('Odd arguments should be chars')
     end
-    if(lm==1) % if we have an unambiguous match
-        options.(optionsFieldNames{m})=argsArray{2,i}; % Pop next argument into our options struct       {} ()
-        argIndex(m)=i;
-        fieldIndex(i)=find(m);
-    elseif(lm==0)
-        command=sprintf('%s(''%s is not a recognised argument'')',noMatchFunction,argi);
-        if ~isequal(localOptions.noMatch,'ignore')
-            eval(command);
+    val=varargin(paramIndex+1);
+    option=closestStringMatch(optionsFieldNames,iparam);
+    localOption=closestStringMatch(localOptionsFieldNames,iparam);
+    % Might have empty/single/multiple values of each of these.
+    % Sort out what we want:
+    struct4Field='';
+    field='';
+    switch length(option)
+        case 1
+            field=char(option);
+            struct4Field='options';
+        otherwise
+            if length(localOption)==1
+                field=char(localOption);
+                struct4Field='localOptions';
+            end
+    end
+    s=struct('Index',paramIndex,'input',iparam,'value',val,'option',{option},'localOption',{localOption},'field',field,'code',struct4Field);
+    optionsStructArray{paramIndex}=s;
+
+end
+optionsStructArray=vertcat(optionsStructArray{:});
+
+%dispStruct(optionsStructArray)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Process local option (which determine what to do if options aren't part
+% of struct / are ambiguous)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+k=find(strcmp({optionsStructArray.code},'localOptions'));
+if ~isempty(k)
+    for rowIndex=k
+        option2Check=optionsStructArray(rowIndex);
+        field=option2Check.field;
+        val=option2Check.value;
+        if ~ischar(val)
+            error('option type must be char')
         end
-    elseif(lm>0)
-        command=sprintf('%s(''%s is an ambiguous argument'')',multipleMatchFunction,argi);
-        if ~isequal(localOptions.multipleMatch,'ignore')
-            eval(command);
+        valmatch=closestStringMatch(validOptions,val);
+        switch length(valmatch)
+            case 0
+                error('invalid option ''%s''',val)
+            case 1
+                val=char(valmatch);
+            otherwise
+                error('ambiguous option ''%s''',val)
+        end
+        localOptions.(field)=val;
+    end
+    optionsStructArray(k,:)=[];
+end
+
+%disp(localOptions)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Final stage - update values in options struct
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+N=length(optionsStructArray);
+for rowIndex=1:N
+    option2Check=optionsStructArray(rowIndex);
+    field=option2Check.field;
+    val=option2Check.value;
+    ip=option2Check.input;
+    command='';
+    switch length(option2Check.option)
+        case 0
+            command=sprintf('%s(''"%s" is not a recognised option'');',localOptions.noMatch,ip);
+        case 1
+            options.(field)=val;
+        otherwise
+            command=sprintf('%s(''"%s" is ambiguous option'');',localOptions.multipleMatch,ip);
+    end
+    if ~contains(command,'ignore')
+        eval(command)
+    end
+end
+
+% Function to convert struct to cell array
+% Odd entries are struct fieldnames
+% Even entries are values of those fields
+    function op=struct2varargin(s)
+        fn=fieldnames(s);
+        N=length(fn);
+        op=cell(1,2*N);
+        for i=1:N
+            fni=fn{i};
+            ind1=2*(i-1)+1;
+            ind2=ind1+1;
+            op{ind1}=fni;
+            var={s.(fni)};
+            try
+                var=vertcat(var{:});
+            catch
+            end
+            op{ind2}=var;
         end
     end
 end
 
-end
