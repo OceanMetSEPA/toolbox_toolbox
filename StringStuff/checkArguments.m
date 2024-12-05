@@ -51,12 +51,12 @@ if nargin==0
     return
 end
 
-% Ensure function copes with using varargin or varargin{:} as input:
-while length(varargin)==1 && iscell(varargin)
-    varargin=varargin{:};
-end
 
-if isempty(varargin)
+% Ensure function copes with using varargin or varargin{:} as input:
+while ~isempty(varargin) && iscell(varargin{1})
+    varargin=[varargin{:}];
+end
+if isempty(varargin) || isempty(varargin{1})
     %    fprintf('Returning because varargin empty\n')
     return
 end
