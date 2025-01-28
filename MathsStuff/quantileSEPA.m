@@ -1,4 +1,4 @@
-function qntile=quantile(x,p,varargin)
+function qntile=quantileSEPA(x,p,varargin)
 % Calculate quantile of a data set, x
 %
 % matlab percentile function
@@ -7,14 +7,16 @@ function qntile=quantile(x,p,varargin)
 % Also, matlab doesn't specify how percentile calculated, when in fact there are a bunch of ways.
 % See http://mathworld.wolfram.com/Quantile.html (This function uses the Q7
 % deffinition).
-% 
-% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%
+%  ************************************************************************
 %  UPDATE 20250128 - Mathworks moved its quantile function from statistics
 %  toolbox to MATLAB core functions in R2022a. Information on its
 %  calculation provided in documentation. But it's still different from
-%  Excel version. We might not want to have two versions of this function
-%  but have used method herein for years so worry about that some other
-%  time...
+%  Excel version.
+%
+% THIS FUNCTION RENAMED 'quantileSEPA' to distinguish it from Mathwork's
+% version!
+% *************************************************************************
 %
 % Here, we calculate it so it matches up with splus / excel
 %
@@ -28,7 +30,7 @@ function qntile=quantile(x,p,varargin)
 %         defaults to 1.
 %   percentile (false) - assume p refers to percentile (divide by 100 prior
 %   to calculation)
-% 
+%
 % OUTPUT
 %   qntile - quantile of x
 %
@@ -39,11 +41,11 @@ function qntile=quantile(x,p,varargin)
 % % Vector input.
 % >> x=rand(100,1);
 % >> quantile(x,0.5) % median value
-% ans = 
+% ans =
 %          0.924520219258406
 % >> quantile(x, 50)
 % Error using quantile (line 113)
-% p (50.000000) should be between 0 and 1 
+% p (50.000000) should be between 0 and 1
 % >> quantile(x, 50, 'percentile', 1)
 % ans =
 %          0.924520219258406
@@ -123,88 +125,88 @@ function qntile=quantile(x,p,varargin)
 %
 
 
-    if nargin<2
-        help quantile
-        return
-    end
+if nargin<2
+    help quantileSEPA
+    return
+end
 
-    All = 0; DIM = 1;
-    % See if dimension is defined.
-    if nargin > 2
-        if isnumeric(varargin{1})
-            DIM = varargin{1};
-            if mod(DIM, 1) ~= 0
-                error('DIM must be an integer value')
-            elseif DIM > ndims(x)
-                error('You have requested quantiles along dimension %d, but there are only %d dimensions.', DIM, ndims)
-            end
-            varargin = varargin(2:end);
-        elseif isequal(varargin{1}, 'All')
-            All = 1; DIM = 1;
-            varargin = varargin(2:end);
+All = 0; DIM = 1;
+% See if dimension is defined.
+if nargin > 2
+    if isnumeric(varargin{1})
+        DIM = varargin{1};
+        if mod(DIM, 1) ~= 0
+            error('DIM must be an integer value')
+        elseif DIM > ndims(x)
+            error('You have requested quantiles along dimension %d, but there are only %d dimensions.', DIM, ndims)
         end
+        varargin = varargin(2:end);
+    elseif isequal(varargin{1}, 'All')
+        All = 1; DIM = 1;
+        varargin = varargin(2:end);
     end
+end
 
-    if ~isnumeric(x)
-        error('x should be numeric')
-    end
-    if ~isnumeric(p)
-        error('p should be numeric')
-    end
-    options=struct;
-    options.percentile=false;
-    options=checkArguments(options,varargin);
+if ~isnumeric(x)
+    error('x should be numeric')
+end
+if ~isnumeric(p)
+    error('p should be numeric')
+end
+options=struct;
+options.percentile=false;
+options=checkArguments(options,varargin);
 
-    % Permute the matrix, so that the requested dimension is the first
-    % dimension.
-    SliceColons = '';
-    if All
-        x = reshape(x, [numel(x), 1]);
+% Permute the matrix, so that the requested dimension is the first
+% dimension.
+SliceColons = '';
+if All
+    x = reshape(x, [numel(x), 1]);
+else
+    Order = unique([DIM, 1:ndims(x)], 'stable');
+    x = permute(x, Order);
+    for D = 2:ndims(x)
+        SliceColons = [SliceColons,',:']; %#ok<AGROW>
+    end
+end
+FloorSlice = ['Y(floor(mwx)', SliceColons, ')'];
+CeilSlice = ['Y(ceil(mwx)', SliceColons, ')'];
+% These 'Slices' are strings that can be eval'd. While it is best to
+% avoid 'eval', I don't know another way to ensure we are getting the
+% correct slices regardless of the number of dimensions.
+
+% Sort the permuted array along it's first dimension.
+Y=sort(x, 1); %#ok<NASGU>  % It is used, but by an eval.
+
+% Use general formula from quantile page on Mathworld.com:
+% Need these coefficients
+a=1;
+b=-1;
+c=0;
+d=1;
+Shape = size(x);
+Nx=Shape(1);
+
+if options.percentile
+    p=p/100;
+end
+
+Np=length(p);
+for Pi=1:Np
+    pIndex=p(Pi);
+    if any(pIndex<0) || any(pIndex>1)
+        error('p (%f) should be between 0 and 1',pIndex)
+    end
+    %(fractional) index of sorted order statistic in which quantile lies (mwx short for MathWorld 'x')
+    mwx = a + (Nx + b) * pIndex;
+    % Righto , here we go!
+    FloorY = eval(FloorSlice);
+    CeilY = eval(CeilSlice);
+    qntileSlice =FloorY + (CeilY - FloorY).*(c+d*(mwx-floor(mwx)));
+    if Pi == 1
+        qntile = qntileSlice;
     else
-        Order = unique([DIM, 1:ndims(x)], 'stable');
-        x = permute(x, Order);
-        for D = 2:ndims(x)
-            SliceColons = [SliceColons,',:']; %#ok<AGROW>
-        end
+        qntile = cat(1, qntile, qntileSlice);
     end
-    FloorSlice = ['Y(floor(mwx)', SliceColons, ')'];
-    CeilSlice = ['Y(ceil(mwx)', SliceColons, ')'];
-    % These 'Slices' are strings that can be eval'd. While it is best to
-    % avoid 'eval', I don't know another way to ensure we are getting the
-    % correct slices regardless of the number of dimensions.
-    
-    % Sort the permuted array along it's first dimension.
-    Y=sort(x, 1); %#ok<NASGU>  % It is used, but by an eval.
-
-    % Use general formula from quantile page on Mathworld.com:
-    % Need these coefficients
-    a=1;
-    b=-1;
-    c=0;
-    d=1;
-    Shape = size(x);
-    Nx=Shape(1);
-
-    if options.percentile
-        p=p/100;
-    end
-
-    Np=length(p);
-    for Pi=1:Np
-        pIndex=p(Pi);
-        if any(pIndex<0) || any(pIndex>1)
-            error('p (%f) should be between 0 and 1',pIndex)
-        end
-        %(fractional) index of sorted order statistic in which quantile lies (mwx short for MathWorld 'x')
-        mwx = a + (Nx + b) * pIndex;
-        % Righto , here we go!
-        FloorY = eval(FloorSlice);
-        CeilY = eval(CeilSlice);       
-        qntileSlice =FloorY + (CeilY - FloorY).*(c+d*(mwx-floor(mwx)));
-        if Pi == 1
-            qntile = qntileSlice;
-        else
-            qntile = cat(1, qntile, qntileSlice);
-        end
-    end
+end
 end
