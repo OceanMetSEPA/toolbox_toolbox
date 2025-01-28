@@ -20,6 +20,17 @@ if rand(1)>inf
     disp(ip)
 end
 
+p=fileparts(matfileName);
+if ~isempty(p)
+    if ~isfolder(p)
+        fprintf('Creating folder ''%s''\n',p)
+        ok=mkdir(p);
+        if ~ok
+            error('Problem creating directory ''%s''',p);
+        end
+    end
+end
+
 % Get name of input variable:
 varname=inputname(1);
 
