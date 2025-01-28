@@ -1,4 +1,4 @@
-function [ ] = dispStruct(s,varargin)
+function varargout = dispStruct(s,varargin)
 % Display struct (array)
 %
 % This function displays a struct whose fields have equal length to the
@@ -8,10 +8,17 @@ function [ ] = dispStruct(s,varargin)
 % s - struct to display
 %
 % Optional Inputs:
-% rows2Display - indices of rows to display
+% rows2Display [] - indices of rows to display (if empty, display everything)
+% transpose [false] - rows -> columns and vice versa
+% ungenvarname [true] - call this function on fieldnames
+% rmfields [] - if not empty, remove these fields prior to display
+% char [true] - convert output to char (useful for pasting elsewhere)
 %
 % OUTPUT:
-% none
+% char if 'char' option above is true; cell otherwise
+%
+% Note - this function was developed prior to the'table' class. Using table
+% is probably better for tabular data...
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % $Workfile:   dispStruct.m  $
@@ -31,7 +38,7 @@ end
 
 if istable(s)
     try
-%        fprintf('Converting table to struct...\n')
+        %        fprintf('Converting table to struct...\n')
         s=table2struct(s);
     catch
         error('problem converting table to struct')
@@ -47,6 +54,7 @@ options=struct;
 options.rows=[];
 options.transpose=false;
 options.ungenvarname=true;
+options.char=true;
 options.rmfields=[];
 
 % Old version of this function only had one optional argument. This is for
@@ -61,7 +69,7 @@ options=checkArguments(options,varargin);
 rows2Display=options.rows;
 
 
- % Check field sizes
+% Check field sizes
 fn=fieldnames(s);
 if ~isempty(options.rmfields)
     fn2Remove=options.rmfields;
@@ -92,7 +100,6 @@ if ~isempty(rows2Display)
         error('Argument 2 should be integer')
     end
     if any(rows2Display<0)
-%        hmm=length(s)
         rows2Display=length(s)+rows2Display;
     end
     if any(rows2Display<1 | rows2Display>length(s))
@@ -112,7 +119,18 @@ op=[fn;c];
 if options.transpose
     op=op';
 end
-disp(op);
 
+if options.char
+   op=evalc('disp(op)');
+end
+
+switch nargout
+    case 0
+        disp(op);
+    case 1
+        varargout{1}=op;
+    otherwise
+        error('too many outputs')
+end
 
 end
