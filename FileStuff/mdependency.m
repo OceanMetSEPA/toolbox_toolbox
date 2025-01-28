@@ -1,4 +1,4 @@
-function mdependency(script2Check,checkOps)
+function varargout=mdependency(script2Check,checkOps)
 % Find functions required by input script/function
 %
 % INPUT:
@@ -8,20 +8,29 @@ function mdependency(script2Check,checkOps)
 % checkOps [false] - check whether dependencies are in OPS folder
 
 if nargin<2
-    checkOps=true;
+    checkOps=false;
 end
 
 filesNeeded=matlab.codetools.requiredFilesAndProducts(script2Check)';
 Nf=length(filesNeeded);
-if Nf==0
-    fprintf('No dependencies\n')
-    return
+switch nargout
+    case 0
+        % Nf=length(filesNeeded);
+        % if Nf==0
+        %     fprintf('No dependencies\n')
+        %     return
+        % end
+        % NB Nf is never equal to zero! Even empty script needs itself...
+
+        fprintf('%d files needed:\n',Nf)
+        disp(filesNeeded)
+        underline
+
+    case 1
+        varargout{1}=filesNeeded;
+    otherwise
+        error('too many outputs requested')
 end
-
-fprintf('%d files needed:\n',Nf)
-disp(filesNeeded)
-underline
-
 if ~checkOps
     return
 end
