@@ -1,42 +1,67 @@
-function cb=drawColourBar(cm,ticks,varargin)
-% COLORBAR with custom ticks
-% TO DO: Write more help!
+function varargout=drawColourBar(cm,ticks,varargin)
+% wrapper function for matlab's colorbar function
+%
+% This function draws a colorbar, generating equally-spaced ticks and labels, 
+% and updates its colormap
+%
+% INPUTS:
+% cm - colormap of size [NColours,3]
+% ticks - either values or labels
+%
+% Optional inputs:
+% fontSize [12] - size of tick labels
+% prefix ['>'] - tick labels start with this
+%
+% OUTPUT:
+% cb - handle of colorbar
+%
+
+if nargin<2
+    ticks=size(cm,1);
+end
 
 options=struct;
-%options.format='%d.3g%s';
-options.format='%d';
-options.labels=[];
-options.fontSize=14;
-options.location='EastOutside'; % TO DO- check this is valid location
+options.fontSize=12;
+options.prefix='>';
 options=checkArguments(options,varargin);
 
-colormap(cm);
-cb=colorbar('Location',options.location,'units','pixels','FontSize',options.fontSize);
-
-if(~exist('ticks','var'))
-    ticks=get(cb,'YTick');
-end
-
-if isempty(options.labels)
-    tickLabels={length(ticks)};
-    for ticki=1:length(ticks)
-        tickLabels{ticki}=sprintf(options.format,ticks(ticki));
+if isnumeric(ticks)
+    if ~isscalar(ticks) % Multiple values? Use these as tick labels
+        NTicks=length(ticks);
+        tickLabels=arrayfun(@(i)sprintf('%s %s',options.prefix,num2str(ticks(i))),1:NTicks,'unif',0);
+    else % single value? Assume this is number of ticks required
+        NTicks=ticks;
+        tickLabels=arrayfun(@num2str,1:NTicks,'unif',0);
     end
+elseif iscellstr(ticks) || isstring(ticks) % tick labels passed to function?
+    NTicks=length(ticks);
+    tickLabels=ticks;
+else
+    error('Expected number of ticks or tick labels as input')
 end
 
-% Some tinkering
-tickPositions=ticks;
-set(cb,'ytick',tickPositions)
-set(cb,'yticklabel',tickLabels)
-yrange=[min(ticks),max(ticks)];
-set(cb,'ylim',yrange)
-set(cb,'Limits',yrange)
-caxis([min(ticks),max(ticks)])
+% Space out ticks evenly along colorbar:
+dtick=(NTicks-1)/NTicks;
+yticks=1+dtick/2:dtick:NTicks;
 
-return
+% Now generate color bar
+cb=colorbar;
+set(cb,'ytick',yticks);
+set(cb,'yticklabel',tickLabels);
+set(cb,'ylim',[1,NTicks]);
+set(cb,'fontsize',options.fontSize)
 
+% Set colormap of bar to specified colours:
+colormap(cm)
+% Set colour range to match ticks (by default it's [0,1]:
+clim([1,NTicks])
 
+switch nargout
+    case 0
+    case 1
+        varargout{1}=cb;
+    otherwise
+        error('too many outputs')
 end
 
-
-
+end
