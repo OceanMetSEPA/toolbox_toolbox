@@ -26,8 +26,8 @@ function op=findDuplicateMFiles(varargin)
 %
 % which mean
 % which('mean')
-% 
-
+%
+op=[];
 
 options=struct;
 options.ignore={'examples.m','Contents.m','help.m'};
@@ -36,7 +36,7 @@ options=checkArguments(options,varargin);
 scripts2Ignore=options.ignore;
 
 % Find .m files
-p=strsplit(path,';');
+p=[pwd,strsplit(path,';')];
 fprintf('Finding .m files...\n')
 % NB if options.package, we look through subdirectories to ensure we get
 % files in packages (e.g. +Depomod);
@@ -67,52 +67,64 @@ end
 
 % Use tally function to find duplicate scripts:
 duplicateTable=tally(scriptsCropped,'duplicate',1);
-duplicateScripts=duplicateTable(1,:)'; % First row has script
+duplicateScripts=duplicateTable(1,:)'; % First of tally output row has script
 NDuplicateScripts=length(duplicateScripts); % Number of duplicate scripts
+
+if NDuplicateScripts==0
+    fprintf('*** No duplicates detected! ***\n')
+    return
+end
+
+% Full path of duplicate scripts:
+duplicateScriptsFullPath=f(contains(f,duplicateScripts));
+if all(contains(duplicateScriptsFullPath,matlabroot))
+    fprintf('%d duplicates in matlabroot (''%s'') - ignore these\n',NDuplicateScripts,matlabroot)
+    return
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Loop through duplicates and generate struct with path/time information of
 % duplicates:
-if NDuplicateScripts>0
-    fprintf('Duplicate script name(s) found!\n')
-    % OK, now we prepare a struct containing info about any duplicates.
-    % fieldnames: name of duplicate script (minus .m - matlab doesn't like dots in fieldnames)
-    % fields:     full path to each duplicate script name
-    op=struct;
-    for scriptIndex=1:NDuplicateScripts
-        dsi=duplicateScripts{scriptIndex}; % script name, complete with .m
-        % Find full paths with this script name
-        duplicateStringsWithPath=f(contains(f,dsi));
-        % If duplicates are built-in matlab functions, don't worry about
-        % it. Presumably mathworks knows what it's doing
-        if all(contains(duplicateStringsWithPath,matlabroot))
-            continue
-        end
-        
-        NDuplicates=length(duplicateStringsWithPath);
-        dsModTimes=NaN(NDuplicates,1);
-        for duplicateIndex=1:NDuplicates
-            jinfo=dir(duplicateStringsWithPath{duplicateIndex});
-            dsModTimes(duplicateIndex)=jinfo.datenum;
-        end
-        [~,o]=sort(dsModTimes); % Sort by modification time
-        ds=cellstr(datestr(dsModTimes(o))); % Date string more informative to user than datenum
-        ops=[duplicateStringsWithPath(o),ds];
-        fn=strrep(dsi,'.m','');
-        ind=regexp(fn,filesep);
-        ind=ind(end);
-        fn=fn(ind+1:end);
-        fn=genvarname(fn);
-        op.(fn)=ops;
-        [numD, ~] = size(ops);
-        fprintf('Script ''%s'' (duplicate %d of %d) found %d times:\n',dsi,scriptIndex,NDuplicateScripts,numD)
-        fprintf('    Modification Date    - Location\n')
-        for dI = 1:numD
-            fprintf('    %20s - %s\n', ops{dI, 2}, ops{dI, 1})
-        end
-        %disp(ops)
+fprintf('Checking %d duplicate script name(s)...\n',NDuplicateScripts)
+% OK, now we prepare a struct containing info about any duplicates.
+% fieldnames: name of duplicate script (minus .m - matlab doesn't like dots in fieldnames)
+% fields:     full path to each duplicate script name
+op=struct;
+for scriptIndex=1:NDuplicateScripts
+    dsi=duplicateScripts{scriptIndex}; % script name, complete with .m
+    % Find full paths with this script name
+    duplicateStringsWithPath=f(contains(f,dsi));
+    % If duplicates are built-in matlab functions, don't worry about
+    % it. Presumably mathworks knows what it's doing
+    if all(contains(duplicateStringsWithPath,matlabroot))
+        continue
     end
-else
-    fprintf('*** No duplicates detected ***\n')
+
+    NDuplicates=length(duplicateStringsWithPath);
+    dsModTimes=NaN(NDuplicates,1);
+    for duplicateIndex=1:NDuplicates
+        jinfo=dir(duplicateStringsWithPath{duplicateIndex});
+        dsModTimes(duplicateIndex)=jinfo.datenum;
+    end
+    [~,o]=sort(dsModTimes); % Sort by modification time
+    ds=cellstr(datestr(dsModTimes(o))); % Date string more informative to user than datenum
+    ops=[duplicateStringsWithPath(o),ds];
+    fn=strrep(dsi,'.m','');
+    ind=regexp(fn,filesep);
+    ind=ind(end);
+    fn=fn(ind+1:end);
+    fn=genvarname(fn);
+    op.(fn)=ops;
+    [numD, ~] = size(ops);
+    fprintf('Script ''%s'' (duplicate %d of %d) found %d times:\n',dsi,scriptIndex,NDuplicateScripts,numD)
+    fprintf('    Modification Date    - Location\n')
+    for dI = 1:numD
+        fprintf('    %20s - %s\n', ops{dI, 2}, ops{dI, 1})
+    end
+    %disp(ops)
+end
+if isempty(fieldnames(op))
+    fprintf('No duplicates found :-)\n')
     op=[];
 end
+
