@@ -34,8 +34,8 @@ data=load(matfileName);
 try
     fn=char(fieldnames(data));
     op=data.(fn);
-catch err
-    disp(err)
-    warning('Problem extracting field :-(')
+catch % err
+%    disp(err)
+%    warning('Problem extracting field :-(')
     op=data;
 end
