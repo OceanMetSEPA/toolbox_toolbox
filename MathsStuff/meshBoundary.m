@@ -1,4 +1,4 @@
-function varargout = meshBoundaryChatGPT(F,varargin)
+function varargout = meshBoundary(F,varargin)
 %function boundaryIndices = meshBoundaries(F)
 %
 % ChatGPT improved original version immensely!
