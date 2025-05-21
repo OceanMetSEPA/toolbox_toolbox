@@ -12,7 +12,7 @@ function s=tstruct(varargin)
 % EXAMPLE:
 % s=tstruct('EQS µg/l',1234); % allocate struct with 'invalid' name
 % s=tstruct(s,'& another field','fishface'); % add field to struct
-% dispStruct(s)
+% dispStruct(s)   
 
 if nargin==0
     help tstruct
