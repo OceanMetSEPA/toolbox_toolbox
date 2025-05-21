@@ -1,7 +1,7 @@
 function varargout = compareValues(x,y,details)
 % Compare two sets of values
 % (Essentially call setdiff(x,y) and setdiff(y,x))
-
+% Passing true third argument displays all differences
 if nargin<3
     details=false;
 end
