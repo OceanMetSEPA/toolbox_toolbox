@@ -18,7 +18,6 @@ function op=loadMatfile(matfileName)
 % toc % 10s
 % %
 % %isequal(imp,checkOrig.sparseConcStruct)
-% 20250521 - minor change to comment for testing git clone/push
 
 % 20231025 - modify so we can add multiple inputs with one call
 matfileName=cellstr(matfileName); % convert from char to cellstr
