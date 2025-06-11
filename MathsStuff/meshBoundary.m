@@ -7,23 +7,30 @@ function varargout = meshBoundary(F,varargin)
 % with NaN separating different loops.
 %
 % Input:
-%   - F: Face connectivity (Nx3 or Nx4 matrix for triangles/quads)
+%   - F: Face connectivity (Nx3 or Nx4 matrix for triangles/quads), or
+%   - meshStruct (as loaded by Mike.loadMesh)
 % Optional Inputs (for backward compatability):
 %   x,y
 % Output:
 %   - boundaryIndices: 1D array of boundary node indices, with NaN separating loops
 
-xySpecified=nargin>1;
-if xySpecified
-    try
-        x=varargin{1};
-        y=varargin{2};
-    catch err
-        disp(err)
-        error('Invalid input arguments!')
+if isstruct(F)
+    xySpecified=true;
+    x=F.xMesh;
+    y=F.yMesh;
+    F=F.meshIndices;
+else
+    xySpecified=nargin>1;
+    if xySpecified
+        try
+            x=varargin{1};
+            y=varargin{2};
+        catch err
+            disp(err)
+            error('Invalid input arguments!')
+        end
     end
 end
-
 % Step 1: Extract all unique boundary edges
 if size(F, 2) == 3  % Triangles
     edges = [F(:, [1,2]); F(:, [2,3]); F(:, [3,1])];
