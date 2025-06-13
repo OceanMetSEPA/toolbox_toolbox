@@ -32,19 +32,32 @@ function result = decayRate(tOrK, unit, decayPercentage, outputUnit)
 % OUTPUT:
 %   result - Decay constant (if time input) or decay time (if decay constant input)
 %
+%
 % EXAMPLES: 
-% Half-life of 1 day:
-%   k = decayRate(1, 'day', 50)       % Expected: ~0.6931 (per day)
+% % Half-life of T days:
+%   T = 1
+%   k = decayRate(T, 'day', 50)       % Expected: ~0.6931 (per day)
 %   exp(-k)                           % Should be ~0.5
 %
-% Get time from k:
-%   t = decayRate(-k, 'day', 50)      % Expected: 1
+%  %Get time from k:
+%   t = decayRate(-k, 'day', 50)      % Expected: T
 %
 % E. coli decaying 90% in 15 hours:
 %   k = decayRate(15, 'hour', 90, 'second')  % ~4.264e-5 per second
 %   t = decayRate(-k, 'second', 90, 'hour')  % Should return 15
 %
-% See also: EXP, LOG
+% NOTE:
+% The equations for t and k are symmetric, so 
+% decayRate(decayRate(T,'day',50), 'day', 50) = T
+% decayRate(decayRate(k,'day',50), 'day', 50) = k
+%
+% However, if we want to scale the output to a different unit, time and
+% decay rate are treated differently. So converting from minutes to
+% seconds, the time value is multiplied by 60 whereas the decay rate
+% decreases by a factor 60. 
+%
+% In order to ensure the scaling is correct, pass the decay rate as a
+% negative value (i.e. -k).
 
 if nargin == 0
     help decayRate
