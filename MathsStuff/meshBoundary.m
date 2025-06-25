@@ -1,18 +1,20 @@
 function varargout = meshBoundary(F,varargin)
-%function boundaryIndices = meshBoundaries(F)
+% Generate boundary of face connectivity
 %
 % ChatGPT improved original version immensely!
 %
 % Extracts boundary loops from a mesh and returns them as a 1D array
 % with NaN separating different loops.
 %
-% Input:
+% INPUT- either:
 %   - F: Face connectivity (Nx3 or Nx4 matrix for triangles/quads), or
 %   - meshStruct (as loaded by Mike.loadMesh)
 % Optional Inputs (for backward compatability):
 %   x,y
-% Output:
+%
+% OUTPUTS:
 %   - boundaryIndices: 1D array of boundary node indices, with NaN separating loops
+% xb,yb: boundary coordinates
 
 if isstruct(F)
     xySpecified=true;
@@ -48,11 +50,11 @@ boundaryEdges = uniqueEdges(counts == 1, :);  % Select edges that appear only on
 % Step 2: Group edges into separate closed loops
 loops = groupBoundaryLoops(boundaryEdges);
 
-% Step 3: Convert loops into 1D array with NaNs separating them
+% Step 3: Convert loops into closed 1D array with NaNs separating them
 boundaryIndices = [];
 for i = 1:length(loops)
     loop = loops{i}(:, 1);  % Extract ordered node indices
-    boundaryIndices = [boundaryIndices; loop; NaN]; %#ok<AGROW> % Add NaN separator
+    boundaryIndices = [boundaryIndices; loop;loop(1); NaN]; %#ok<AGROW> % Add NaN separator
 end
 
 % Prepare output
@@ -109,7 +111,6 @@ end
                 loop = [loop; boundaryEdges(nextIdx, :)];
                 boundaryEdges(nextIdx, :) = [];
             end
-
             loops{end+1} = loop;
         end
     end
