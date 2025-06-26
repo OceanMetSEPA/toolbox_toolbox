@@ -1,55 +1,42 @@
-function s=numstruct(s)
+function s = numstruct(s)
 % Convert struct to numeric
-% 
-% INPUT:
-% s - struct 
 %
-% OUTPUT:
-% s - struct with fields converted to numeric where appropriate
-%
-% EXAMPLE
-% s=struct('a','fish','b','3.14','c',{{1,'2','fish'}})
-% s.s=s; % add nested struct
-%
-% sn=numstruct(s)
-    % a: 'fish'
-    % b: 3.14
-    % c: {[1]  [2]  'fish'}
-    % s: [1×1 struct]
-% sn.s
-    % a: 'fish'
-    % b: 3.14
-    % c: {[1]  [2]  'fish'}
+% Recursively converts strings to numeric values where possible
+% inside structs and cells, while preserving non-convertible data.
 
-fn=fieldnames(s);
-Nf=length(fn);
-for i=1:Nf
-    fni=fn{i};
-    ivalue=s.(fni);
+if ~isscalar(s)
+    for idx = 1:numel(s)
+        s(idx) = numstruct(s(idx));
+    end
+    return;
+end
+
+fn = fieldnames(s);
+for i = 1:numel(fn)
+    fni = fn{i};
+    ivalue = s.(fni);
+
     if isstruct(ivalue)
-        s.(fni)=numstruct(ivalue);
+        s.(fni) = numstruct(ivalue);  % Recursive call
+
     elseif iscell(ivalue)
-        val=cell(size(ivalue));
-        for cellIndex=1:numel(ivalue)
-            ival=ivalue{cellIndex};
-            try
-                tmp=str2num(ival);
-                if ~isnan(tmp) && ~isempty(tmp)
-                    val{cellIndex}=tmp;
+        val = ivalue;  % Preserve shape and contents
+        for cellIndex = 1:numel(ivalue)
+            ival = ivalue{cellIndex};
+            if ischar(ival) || (isstring(ival) && isscalar(ival))
+                tmp = str2double(ival);
+                if ~isnan(tmp)
+                    val{cellIndex} = tmp;
                 end
-            catch % oh well
-                val{cellIndex}=ival;
             end
-            s.(fni)=val;
         end
-    else
-        try
-            numericValue=str2num(ivalue); % warning: str2num is slower than str2num
-            if ~any(isnan(numericValue)) && ~all(isempty(numericValue))
-                s.(fni)=numericValue;
-            end
-        catch
-            % isname(template) fails when splitting NewDepomod template files
+        s.(fni) = val;
+
+    elseif ischar(ivalue) || (isstring(ivalue) && isscalar(ivalue))
+        tmp = str2double(ivalue);
+        if ~isnan(tmp)
+            s.(fni) = tmp;
         end
     end
+end
 end
