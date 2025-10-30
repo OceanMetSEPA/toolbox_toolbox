@@ -1,127 +1,105 @@
-function diStructArray = dirInfo( f ,varargin)
-% call matlab 'dir' function on multiple files / directories
-% Options to sort resulting struct array by name, size or date modified
+function op = dirInfo(f, varargin)
+% dirInfo - Enhanced dir() wrapper for multiple files/folders with sorting.
 %
 % INPUT:
-% f [] - file/directory, or cellstr of them
-%
-% Optional Inputs:
-% sortOption [] - unique identifier for 'size','date' or 'name'
-% directionOption [] - unique identifier for 'ascending' or 'descending'
+%   f              - File/folder name or cell array of them.
+%   sortOption     - ('size','date','name')  [optional]
+%   ascending      - true/false or numeric (default: true)
 %
 % OUTPUT:
-% struct array with fields:
-%     name % file/directory with path removed
-%     folder % path
-%     date % date string
-%     bytes % size in bytes (NB directories have size zero)
-%     isdir % is it a directory?
-%     datenum % of modification
-%     sizeLabel % string describing size (in bytes, KB, MB etc)
-%     fullfile % =fullfile(folder,name)
+%   Table with fields:
+%       name, folder, date (datetime), bytes, isdir, sizeLabel, fullfile
 %
 % EXAMPLES:
-% dirInfo(userMatlabPaths) % all files within path
-% dirInfo(pwd,'size','des') % contents of pwd, from big to small
+%   dirInfo(userpath)                % list all files in path
+%   dirInfo(pwd,'size',-1)           % sort by size descending
+%
+% -------------------------------------------------------------------------
 
-if nargin<1
-    help dirInfo
+if nargin < 1
+    help(mfilename);
     return
 end
-%
-% Check input arguments. We can order by:
-% 1) name (alphabetical order)
-% 2) date (modified)
-% 3) size
-% And we can arrange in direction:
-% 1) ascending (A-Z, old-new, small-big)
-% 2) descending (Z-A, new-old, big-small)
-% If neither is set, we leave order as how dir function returns them
+
+% --- Handle input & sorting options
 if ~isempty(varargin)
-    sortOptions={'size','date','name'};
-    directionOptions={'ascending','descending'};
-    k=contains(sortOptions,varargin);
-    switch sum(k)
-        case 0
-            warning('No valid input for sorting')
-            sortOption=[];
-        case 1
-            sortOption=sortOptions{k};
-        otherwise
-            disp(sortOptions(k))
-            error('Ambiguous sort option!')
-    end
-    k=contains(directionOptions,varargin);
-    switch sum(k)
-        case 0
-            warning('No valid input for order')
-            directionOption=[];
-        case 1
-            directionOption=directionOptions{k};
-        otherwise
-            disp(directionOptions(k))
-            error('Ambiguous direction option!')
-    end
+    sortOptions = {'size','date','name'};
+    sortOption  = resolveOption(varargin,sortOptions);
+    ascending   = resolveOption(varargin,[true,false]);
 else
-    sortOption=[];
-    directionOption=[];
+    sortOption = [];
+    ascending  = true;
 end
-%fprintf('Sort option = ''%s''; direction = ''%s''\n',sortOption,directionOption)
 
-f=cellstr(f);
+f = cellstr(f);
+Nf = numel(f);
+diCellArray = cell(Nf,1);
 
-% Code below doesn't work for mixed dirs/ files
-%di=cellfun(@dir,f,'Unif',0);
-%di=vertcat(di{:});
-%[di.fullpath]=deal(f{:});
-% We want to include fullpath, but code below creates folders with '\.' and
-% '\..' at end - don't really want that
-% diStructArray=cellfun(@dir,f,'Unif',0);
-% diStructArray=vertcat(diStructArray{:});
-% pathBit={diStructArray.folder};
-% endBit={diStructArray.name};
-% fullBit=fullfile(pathBit,endBit);
-% [diStructArray.fullfile]=deal(fullBit{:});
-
-% So instead we'll just loop through everything
-Nf=length(f);
-diCellArray=cell(Nf,1);
-for index=1:Nf
-    fi=f{index};
+for index = 1:Nf
+    fi = f{index};
     if ~isfile(fi) && ~isfolder(fi)
-        warning('%s not file/folder!!',fi)
+        warning('%s not file/folder!!', fi);
         continue
     end
-    dii=dir(fi); % struct array
-    % generate string with more meaningful size
-    fsize=cellstr(sizeString([dii.bytes]));
-    [dii.sizeLabel]=fsize{:}; % then add like this!
-    % Now prepare fullfile
-    ff=fullfile({dii.folder},{dii.name});
-    [dii.fullfile]=deal(ff{:});
-    diCellArray{index}=dii;
+
+    dii = dir(fi);  % struct array
+
+    % --- Convert date string to datetime safely
+    try
+        for k = 1:numel(dii)
+            dii(k).date = datetime(dii(k).date, 'InputFormat', 'dd-MMM-yyyy HH:mm:ss');
+        end
+    catch
+        % fallback if format differs
+        for k = 1:numel(dii)
+            dii(k).date = datetime(dii(k).date);
+        end
+    end
+
+    % Remove datenum field if it exists
+    if isfield(dii,'datenum')
+        dii = rmfield(dii,'datenum');
+    end
+
+    % --- Add sizeLabel
+    fsize = arrayfun(@(x) sizeString(x.bytes), dii, 'UniformOutput', false);
+    [dii.sizeLabel] = fsize{:};
+
+    % --- Add fullfile path
+    ff = arrayfun(@(x) fullfile(x.folder, x.name), dii, 'UniformOutput', false);
+    [dii.fullfile] = ff{:};
+
+    diCellArray{index} = dii;
 end
 
-diStructArray=vertcat(diCellArray{:});
+% --- Merge into single struct array
+diStructArray = vertcat(diCellArray{:});
 
+% --- Optional sorting
 if ~isempty(sortOption)
     switch char(sortOption)
         case 'size'
-            vals2Sort=[diStructArray.bytes];
+            vals2Sort = [diStructArray.bytes];
         case 'date'
-            vals2Sort=[diStructArray.datenum];
+            vals2Sort = [diStructArray.date];  % now datetime, no need for datenum
         case 'name'
-            vals2Sort={diStructArray.name};
+            vals2Sort = {diStructArray.name};
         otherwise
-            error('Invalid sort option %s',sortOption)
+            error('Invalid sort option %s', sortOption);
     end
-    fprintf('Sorting by ''%s''...\n',sortOption);
-    [~,indexOrder]=sort(vals2Sort);
-    if isequal(directionOption,'descending')
-        indexOrder=fliplr(indexOrder);
-        fprintf('...in reverse order\n')
+
+    if ascending
+        order = 'ascend';
+    else
+        order = 'descend';
     end
-    diStructArray=diStructArray(indexOrder);
+    fprintf('Sorting by ''%s'' in %sing order\n', sortOption, order);
+
+    [~, indexOrder] = sort(vals2Sort, order);
+    diStructArray = diStructArray(indexOrder);
 end
+
+% --- Convert to table for easier use
+op = struct2table(diStructArray);
 
 end
