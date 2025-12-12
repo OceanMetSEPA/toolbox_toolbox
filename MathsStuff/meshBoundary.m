@@ -157,5 +157,5 @@ else
     xb = []; yb = [];
 end
 
-fprintf('meshBoundary: done in %.2fs, loops=%d, boundaryEdges=%d\n', toc(tAll), numel(loops), m);
+%fprintf('meshBoundary: done in %.2fs, loops=%d, boundaryEdges=%d\n', toc(tAll), numel(loops), m);
 end
