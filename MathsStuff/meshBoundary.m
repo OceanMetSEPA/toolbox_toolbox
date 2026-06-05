@@ -6,7 +6,8 @@ function [boundaryIndices, xb, yb] = meshBoundary(F, varargin)
 %       [boundaryIndices, xb, yb] = meshBoundary(meshStruct)
 %   - Call with faces, x, y:
 %       [boundaryIndices, xb, yb] = meshBoundary(faces, x, y)
-%
+%    - Call with faces, vertices
+%       [boundaryIndices, xb, yb] = meshBoundary(faces, vertices)
 % NOTES:
 %   - Reproduces the edge-following logic from the verified working version.
 %   - Speed: vectorized edge extraction + compact local indexing + a
@@ -16,22 +17,23 @@ function [boundaryIndices, xb, yb] = meshBoundary(F, varargin)
 %   boundaryIndices : vector of vertex indices; NaN separates loops
 %   xb, yb          : coordinates (empty if not requested / not provided)
 
-tAll = tic;
-
 % --- Input handling ---
+faces=F; 
 if isstruct(F)
     faces = F.meshIndices;
     xMesh = F.xMesh;
     yMesh = F.yMesh;
+elseif nargin == 2
+    vertices=varargin{1};
+    xMesh=vertices(:,1);
+    yMesh=vertices(:,2);
 elseif nargin >= 3
-    faces = F;
     xMesh = varargin{1};
     yMesh = varargin{2};
 else
-    error('Either pass meshStruct or (faces,x,y).');
+    error('Either pass meshStruct or (faces,x,y) or (faces,vertices).');
 end
 
-Nc = size(faces,1);
 nvPer = size(faces,2);
 
 % --- Step 1: boundary edges ---
